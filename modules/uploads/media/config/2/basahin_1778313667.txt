@@ -1,0 +1,229 @@
+MRTS - Technician Operations System (PHP/MySQL)
+A comprehensive web-based technician operations platform for IT support teams to execute work orders efficiently with full offline capability, real-time sync, and digital documentation. Built with PHP, MySQL, JavaScript, and Tailwind CSS.
+Features
+Core Features
+Secure Authentication - SSO/biometric login with session management
+Offline-First Architecture - Complete functionality without internet connection
+Real-Time Sync - Automatic synchronization when online, with conflict resolution
+Work Order Management - Complete lifecycle from assignment to completion
+Work Order Execution
+Step-by-Step Checklists - Required and optional tasks with completion tracking
+Time Tracking - Start/pause/stop timers with session history
+Parts Management - Add, track, and scan equipment/parts with serial numbers
+Media Capture - Before/after photos and video documentation
+Quick Notes - Typed or voice-to-text notes with timestamps
+Digital Signatures - Requester sign-off for work completion
+Customer Communication - Call/message requester with arrival ETA
+Data Integrity
+Offline Audit Logs - All changes tracked locally for forensics
+Validation Rules - Mandatory fields, evidence, and signatures enforcement
+Sync Tracking - Clear indicator of sync status and pending changes
+Last-Write-Wins Resolution - Conflict resolution for offline edits
+Project Structure
+```
+/vercel/share/v0-project/
+├── config.php                    # Configuration \\\& environment variables
+├── database.sql                  # MySQL database schema \\\& sample data
+├── README.md                     # This file
+│
+├── classes/
+│   └── Database.php             # MySQLi wrapper \\\& connection management
+│
+├── controllers/
+│   ├── AuthController.php       # Authentication \\\& session handling
+│   ├── WorkOrderController.php  # Work order CRUD \\\& business logic
+│   └── ExecutionController.php  # Checklist, notes, media, signatures
+│
+├── api/
+│   ├── auth.php                 # Login/logout/auth endpoints
+│   ├── workorders.php           # Work order list/detail/start/complete
+│   ├── execution.php            # Execution data endpoints
+│   └── sync.php                 # Offline sync endpoints (optional)
+│
+├── public/
+│   ├── index.html               # Login page
+│   ├── dashboard.html           # Work orders dashboard
+│   ├── workorder.html           # Work order execution interface
+│   └── js/
+│       ├── offline-sync.js      # IndexedDB offline storage manager
+│       └── signatures.js        # Digital signature canvas utility
+│
+├── uploads/                     # User uploaded media (photos/videos)
+├── logs/                        # Application error logs
+└── cache/                       # Optional caching directory
+```
+Technical Stack
+Backend: PHP 7.4+ with MySQLi
+Database: MySQL 5.7+ with 11 normalized tables
+Frontend: Vanilla JavaScript (ES6+) with Tailwind CSS
+Offline Storage: IndexedDB with automatic sync queue
+Media: Native File Upload API, Canvas API for signatures
+Architecture: MVC pattern with REST API endpoints
+Security: bcrypt password hashing, prepared statements, session management
+Data Models
+WorkOrder
+```typescript
+{
+  id: string
+  workOrderNumber: string
+  title: string
+  description: string
+  priority: 'low' | 'medium' | 'high' | 'critical'
+  status: 'pending' | 'in-progress' | 'completed' | 'cancelled'
+  
+  // Execution
+  checklist: ChecklistItem\\\[]
+  timeLogs: TimeLog\\\[]
+  media: MediaItem\\\[]
+  parts: Part\\\[]
+  notes: WorkOrderNote\\\[]
+  
+  // Sign-off
+  requesterSignature: string
+  technicianSignature: string
+  satisfactionRating: number
+  
+  // Sync
+  lastModified: string
+  isSynced: boolean
+  syncHash: string
+  offlineEdits: boolean
+}
+```
+Key Flows
+1. Authentication Flow
+Technician enters Employee ID & password
+System validates credentials (currently mock)
+Profile saved to IndexedDB
+Session token stored in sessionStorage
+Redirect to dashboard
+2. Work Order Execution Flow
+Start Work: Update status to in-progress, record start time
+Execute Tasks:
+Complete required checklist items
+Time tracking with pause/resume
+Capture photos/videos
+Add parts and serial numbers
+Record notes
+Complete Work:
+Validate all required items complete
+Require at least one photo/video
+Collect digital signature
+Optional satisfaction rating
+Sync: Automatically sync when online
+3. Offline Sync Flow
+Offline Detection: Monitor navigator.onLine
+Local Queue: Store changes to sync queue
+Background Sync: Attempt sync every 10 seconds when online
+Conflict Resolution: Last-write-wins strategy
+Audit Trail: All offline changes tracked with timestamps
+Validation Rules
+Work orders cannot be completed without:
+✅ All required checklist items checked
+✅ At least one photo or video captured
+✅ Digital signature from requester (if configured)
+✅ All mandatory fields populated
+Color Theme
+The app uses a professional green color scheme matching the existing MRTS system:
+Primary Green: `#1F8449` - Main actions and primary UI
+Backgrounds: White & light gray
+Status Indicators: Color-coded by priority and status
+Accents: Orange for warnings, red for critical
+Getting Started
+Prerequisites
+PHP 7.4+ with MySQLi extension enabled
+MySQL 5.7+ server running
+A web server (Apache, Nginx) or PHP built-in server
+Modern browser with IndexedDB support
+Installation
+1. Database Setup
+```bash
+# Login to MySQL
+mysql -u root -p
+
+# Create database
+CREATE DATABASE mrts\\\_technician;
+USE mrts\\\_technician;
+
+# Import schema and sample data
+SOURCE database.sql;
+```
+2. Configuration
+```bash
+# Edit config.php with your database credentials
+nano config.php
+
+# Update these values:
+# $DB\\\_HOST = 'localhost';
+# $DB\\\_USER = 'root';
+# $DB\\\_PASS = 'your\\\_password';
+# $DB\\\_NAME = 'mrts\\\_technician';
+```
+3. Create Required Directories
+```bash
+mkdir -p uploads logs cache
+chmod 755 uploads logs cache
+```
+4. Run Development Server
+```bash
+# Using PHP built-in server (for development only)
+php -S localhost:8000
+
+# Or configure your Apache/Nginx virtual host
+# Ensure DocumentRoot points to /vercel/share/v0-project/public
+```
+5. First Run
+Navigate to `http://localhost:8000` in your browser
+Login with test credentials:
+Employee ID: `TECH001` or `TECH002`
+Password: `password123`
+Dashboard displays assigned work orders
+Testing Offline
+Open DevTools → Network tab
+Set throttling to "Offline"
+Continue using the app - all data cached in IndexedDB
+Changes sync automatically when connection restored
+Check browser DevTools → Application → IndexedDB to view cached data
+Customization
+Adding Sample Work Orders
+Edit `lib/seedData.ts` and add new WorkOrder objects to `SAMPLE\\\_WORK\\\_ORDERS`.
+Changing Theme Colors
+Update color values in `app/globals.css`:
+Modify `--primary` for main green color
+Adjust `--chart-1` for matching accent
+Extending Checklist Items
+Each work order has configurable checklist items in seedData.ts.
+Security Considerations
+Session Management: Use sessionStorage for current session, clear on logout
+Offline Audit: All offline changes tracked with timestamps for forensics
+Password Hashing: Implement bcrypt for production authentication
+SSL/TLS: Enforce HTTPS for sync communication
+Data Encryption: Consider encrypting sensitive data in IndexedDB
+Future Enhancements
+[ ] Real API integration for authentication
+[ ] Cloud-based work order backend
+[ ] GPS location tracking and geofencing
+[ ] Advanced search and filtering
+[ ] Mobile app wrapper (React Native / Capacitor)
+[ ] Recurring work orders and scheduling
+[ ] Analytics dashboard for supervisors
+[ ] Multi-language support
+[ ] Dark mode toggle
+[ ] Offline map viewing
+Troubleshooting
+App won't initialize
+Clear localStorage and sessionStorage
+Check browser console for errors
+Ensure JavaScript is enabled
+Media won't capture
+Grant camera/microphone permissions
+Check browser security settings
+Test on HTTPS or localhost
+Data not syncing
+Check network connection
+Verify sync queue is empty
+Check browser IndexedDB quota
+License
+MIT - See LICENSE file for details
+Support
+For issues or questions, contact the IT support team or create an issue in the project repository.
